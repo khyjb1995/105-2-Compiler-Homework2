@@ -64,14 +64,14 @@ prog	:	mthdcls
 		{ $$ = $1;
 		  program = $$; }
 	|
-		{ printf("****** Parsing failed!\n"); }	
+		{ printf("****** Parsing failed!\n"); }
 	;
 
 mthdcls	:	mthdcl mthdcls
 		{ $$ = $1;
 		  $$->next = $2; }
 	|	mthdcl
-		{ $$ = $1; }	
+		{ $$ = $1; }
 	;
 
 type	:	lINT
@@ -111,7 +111,7 @@ formals	:	formal oformal
 		{ $$ = $1;
 		  $$->next = $2; }
 	|
-		{ $$ = NULL; }	
+		{ $$ = NULL; }
 	;
 
 formal	:	type lID
@@ -125,7 +125,7 @@ oformal	:	lCOMMA formal oformal
 		{ $$ = $2;
 		  $$->next = $3; }
 	|
-		{ $$ = NULL; }	
+		{ $$ = NULL; }
 	;
 
 block	:	lBEGIN stmts lEND
@@ -139,35 +139,49 @@ stmts	:	stmt stmts
 		{ $$ = $1;
 		  $$->next = $2; }
 	|	stmt
-		{ $$ = $1; }	
+		{ $$ = $1; }
 	;
 
 stmt	:	block
-		{ $$ = $1; }	
+		{ $$ = $1; }
 	|	vardcl
-		{ $$ = $1; }	
+		{ $$ = $1; }
 	|	astm
-		{ $$ = $1; }	
+		{ $$ = $1; }
 	|	rstm
-		{ $$ = $1; }	
+		{ $$ = $1; }
 	|	istm
-		{ $$ = $1; }	
+		{ $$ = $1; }
 	|	wstm
-		{ $$ = $1; }	
+		{ $$ = $1; }
 	|	dstm
-		{ $$ = $1; }	
+		{ $$ = $1; }
 	;
 
 vardcl	:	type lID lSEMI
-		{ // Write your own semantic action here.
+		{
+			$$ = create_stm();
+			$$->stm_id = sVDCL1;
+			$$->exp1 = $1;
+			strcpy($$->exp1->name, $2);
 		}
 	|	type astm
-		{ // Write your own semantic action here.
+		{
+			$$ = create_stm();
+			$$->stm_id = sVDCL2;
+			$$->exp1 = $1;
+			$$->stm1 = $2;
 		}
 	;
 
 astm	:	lID lASSIGN expr lSEMI
-		{ // Write your own semantic action here.
+		{
+			$$ = create_stm();
+			$$->stm_id = sASTM;
+			$$->exp1 = create_exp();
+			$$->exp1->exp_id = eASSIGN1;
+			strcpy($$->exp1->name, $1);
+			$$->exp1->exp1 = $3;
 		}
 	;
 
@@ -178,7 +192,11 @@ rstm	:	lRETURN expr lSEMI
 	;
 
 istm	:	lIF lLP bexpr lRP stmt
-		{ // Write your own semantic action here.
+		{
+			$$ = create_stm();
+			$$->stm_id = sISTM;
+			$$->exp1 = $3;
+			$$->stm1 = $5;
 		}
 	|	lIF lLP bexpr lRP stmt lELSE stmt
 		{ $$ = create_stm();
@@ -189,12 +207,24 @@ istm	:	lIF lLP bexpr lRP stmt
 	;
 
 wstm	:	lWRITE lLP expr lCOMMA lQSTR lRP lSEMI
-		{ // Write your own semantic action here.
+		{
+			$$ = create_stm();
+			$$->stm_id = sWSTM;
+			$$->exp1 = create_exp();
+			$$->exp1->exp_id = eWSTM;
+			$$->exp1->exp1 = $3;
+			strcpy($$->exp1->qstr, $5);
 		}
 	;
 
 dstm	:	lREAD lLP lID lCOMMA lQSTR lRP lSEMI
-		{ // Write your own semantic action here.
+		{
+			$$ = create_stm();
+			$$->stm_id = sDSTM;
+			$$->exp1 = create_exp();
+			$$->exp1->exp_id = eDSTM;
+			strcpy($$->exp1->name, $3);
+			strcpy($$->exp1->qstr, $5);
 		}
 	;
 
@@ -216,22 +246,34 @@ mexprs	:	lADD mexpr mexprs
 		  $$->exp1 = $2;
 		  $$->next = $3; }
 	|
-		{ $$ = NULL; }	
+		{ $$ = NULL; }
 	;
 
 mexpr	:	pexpr pexprs
-		{ // Write your own semantic action here.
+		{
+			$$ = create_exp();
+			$$->exp_id = eMEXP;
+			$$->exp1 = $1;
+			$$->next = $2;
 		}
 	;
 
 pexprs	:	lTIMES pexpr pexprs
-		{ // Write your own semantic action here.
+		{
+			$$ = create_exp();
+			$$->exp_id = eTIMES;
+			$$->exp1 = $2;
+			$$->next = $3;
 		}
 	|	lDIVIDE pexpr pexprs
-		{ // Write your own semantic action here.
+		{
+			$$ = create_exp();
+			$$->exp_id = eDIVIDE;
+			$$->exp1 = $2;
+			$$->next = $3;
 		}
 	|
-		{ $$ = NULL; }	
+		{ $$ = NULL; }
 	;
 
 pexpr	:	lINUM
@@ -247,46 +289,87 @@ pexpr	:	lINUM
 		  $$->exp_id = eID;
 		  strcpy( $$->name, $1 ); }
 	|	lLP expr lRP
-		{ // Write your own semantic action here.
+		{
+			$$ = create_exp();
+			$$->exp_id = ePAREN;
+			$$->exp1 = $2;
 		}
 	|	lID lLP aparams lRP
-		{ // Write your own semantic action here.
+		{
+			$$ = create_exp();
+			$$->exp_id = eFUNC;
+			strcpy($$->name, $1);
+			$$->exp1 = $3;
 		}
 	;
 
 bexpr	:	expr lEQU expr
-		{ // Write your own semantic action here.
+		{
+			$$ = create_exp();
+			$$->exp_id = eEQ;
+			$$->exp1 = $1;
+			$$->next = $3;
 		}
 	|	expr lNEQ expr
-		{ // Write your own semantic action here.
+		{
+			$$ = create_exp();
+			$$->exp_id = eNE;
+			$$->exp1 = $1;
+			$$->next = $3;
 		}
 	|	expr lGT expr
-		{ // Write your own semantic action here.
+		{
+			$$ = create_exp();
+			$$->exp_id = eGT;
+			$$->exp1 = $1;
+			$$->next = $3;
 		}
 	|	expr lLT expr
-		{ // Write your own semantic action here.
+		{
+			$$ = create_exp();
+			$$->exp_id = eLT;
+			$$->exp1 = $1;
+			$$->next = $3;
 		}
 	|	expr lGE expr
-		{ // Write your own semantic action here.
+		{
+			$$ = create_exp();
+			$$->exp_id = eGE;
+			$$->exp1 = $1;
+			$$->next = $3;
 		}
 	|	expr lLE expr
-		{ // Write your own semantic action here.
+		{
+			$$ = create_exp();
+			$$->exp_id = eLE;
+			$$->exp1 = $1;
+			$$->next = $3;
 		}
 	;
 
 aparams	:	expr oparams
-		{ // Write your own semantic action here.
+		{
+			$$ = create_exp();
+			$$->exp_id = eAPARM;
+			$$->exp1 = $1;
+			$$->next = $2;
 		}
 	|
-		{ // Write your own semantic action here.
+		{
+			$$ = NULL;
 		}
 	;
 
 oparams	:	lCOMMA expr oparams
-		{ // Write your own semantic action here.
+		{
+			$$ = create_exp();
+			$$->exp_id = eAPARM;
+			$$->exp1 = $2;
+			$$->next = $3;
 		}
 	|
-		{ // Write your own semantic action here.
+		{
+			$$ = NULL;
 		}
 	;
 
@@ -297,4 +380,3 @@ int yyerror(char *s)
 	printf("%s\n",s);
 	return 1;
 }
-
